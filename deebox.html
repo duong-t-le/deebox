@@ -1,6 +1,7 @@
 <!doctype html>
 <html>
 <head>
+<meta name="description" content="deebox is a tool that makes the process of plotting and printing a song on a kikkerland do it yourself music box faster">
 <title>deebox</title>
 
 <style type="text/css">
@@ -12,9 +13,17 @@ canvas {
 
 body {
 	margin: 0px;
+	font-family: Helvetica, Arial, "Lucida Grande", sans-serif;
 }
 
+
 #output {
+	width:100%;
+	height:50px;
+	display:block;
+}
+
+#outputXML {
 	width:100%;
 	height:50px;
 	display:block;
@@ -31,59 +40,160 @@ body {
 	left:0px;
 	position:fixed;
 	border:none;
-	1background-color: cyan;
+	background-color: white;
 	1color:white;
 }
 
 #controls {
-	width: 50%;
+1height:120px;
+}
+
+#info {
+	padding:10px;
+}
+
+#canvasContainer {
+	1position:absolute;
+}
+
+#tools {
+float:left;
+margin-right:10px;
+}
+
+.active {
+font-weight:bold;
+}
+
+#musicxml {
+
+float:left;
+margin-right:10px;
+}
+
+#musicxml:hover {
+text-decoration:underline;
+}
+
+#saveload:hover {
+text-decoration:underline;
+}
+
+#tools:hover {
+text-decoration:underline;
+}
+
+#saveload {
+
+float:left;
+
 }
 </style>
-<link rel="stylesheet"
-   type="text/css"
-   media="print" href="print.css" />
+<link rel="stylesheet" type="text/css" media="print" href="print.css" />
 </head>
 	<body>
 		
-		<p id="info">deebox is a tool used to ease the transfer of custom songs to the music box.</p>
+
 		<fieldset id="controls">
-		<legend>Tools</legend>
-		<div>Marker:&nbsp;<span id="markerLabel"></span></div>
-		<div>Measures:&nbsp;<input id="measureCount" type="text" value="20" style="width:20px"/><span><input id="displayGrid" checked type="checkbox"/>&nbsp;Display Grid</span></div>
-		Zoom:&nbsp;<input id="factor" type="text" value="1" style="width:20px"/>x
-		<input type="button" value="Refresh" onclick="doRefresh()"/>
-		<input type="button" value="Copy" onclick="copy()"/>
-		<input type="button" value="Shift Right" onclick="doShiftRight()"/>
-		<input type="button" value="Print" onclick="doPrint()"/>
-		<input id="importBtn" type="button" value="Import" onclick="importNotes()"/>
-		<input type="button" value="Export" onclick="exportNotes()"/>
-		<textarea id="output"></textarea>
+			<legend id="tools" class="active" onclick="tabToggle(this)">Tools</legend>
+			<legend id="musicxml" onclick="tabToggle(this)">MusicXML</legend>
+			<legend id="saveload" onclick="tabToggle(this)">Save/Load</legend>
+			<br style="clear:both"/>
+			<hr style="margin:4px"/>
+			<div  id="area1">
+			<div><span style="margin-right:10px"><input id="displayGrid" checked type="checkbox"/>&nbsp;Grid On</span>
+			
+			Zoom:&nbsp;<input id="factor" type="text" value="1" style="width:20px"/>x
+			<input type="button" value="Refresh" onclick="doRefresh()"/>
+			<input type="button" value="Clear" onclick="doClear()"/>
+			<input type="button" value="Copy" onclick="copy()"/>
+			<input type="button" value="Undo" onclick="doUndo()"/>
+			<input type="button" value="Shift Right" onclick="doShiftRight()"/>
+			<input type="button" value="Print" onclick="doPrint()"/>
+			
+			<div style="display:inline;float:right;margin-right:20px">Marker:&nbsp;<span id="markerLabel"></div></span></div>
+			<div>Measures:&nbsp;<input id="measureCount" type="text" value="10" style="width:20px"/>
+			&nbsp;Time&nbsp;Signature:&nbsp;<input name="timeSignature" type="radio" value="6">3/4</input><input name="timeSignature" type="radio" value="8">4/4</input><span>
+			
+			<div style="float:right">
+			<select id="songs">
+				<option value="s1">Nathaniel Year 1</option>
+				<option value="s2">Nathaniel Year 2</option>
+			</select>
+			<input id="loadSongBtn" type="button" value="Load" onclick="loadSong()"/>
+			</div>
+			</div>
+			</div>
+			
+<div id="area2" style="display:none">
+			<input type="button" value="ProcessXML" onclick="doXML()"/>
+			<textarea id="outputXML" ></textarea>
+</div>
+<div id="area3" style="display:none">
+			<input id="importBtn" type="button" value="Import" onclick="importNotes()"/>
+			<input type="button" value="Export" onclick="exportNotes()"/>
+			<textarea id="output"></textarea>
+</div>
+
 		</fieldset>
+
 		
-		
-		<div id="canvasContainer"><!-- width="3000px" height="232px" -->
+		<div id="canvasContainer">
 			<canvas id="deebox" >
 				<p>Your browser doesn't support canvas.</p>
 			</canvas>
 			<canvas id="notesLabel" width="20px" height="232px"></canvas>
 		</div>
-		
-		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
+				<div id="info">deebox is a tool used to ease the transfer of custom songs to the Kikkerland music box.
+			<ul style="font-size:.9em">
+				<li>Method 1: Click on the grid the notes you want. Each vertical division represents an eighth note. Use the Export and Import buttons to save off the coordinates.
+				<li>Method 2: Use a program like TuxGuitar to compose the tune. Then export to MusicXML format and paste into the appropriate box and process. It's still experimental and doesn't do rests well yet but the Shift Right button can help with that.
+			</ul>
+		Finally, you can use the Print button which cuts up the track and print to your printer using landscape mode on some thick paper.
+		</div>
+		<script src="jquery-1.6.4.min.js"></script>
+		<!--<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>-->
 		<script>
 			var canvas = document.getElementById('deebox');
 			var c = canvas.getContext('2d');
+			var deebox;
 			$(document).ready(function(){
+				$('#tools').click();
 				$(document).scroll(noteLabelHandler);
 				$('#importBtn').click();
 				$('#displayGrid').bind('click',toggleDisplayGrid);
 				
 				canvas.addEventListener("click", clickStrip, false);
+
+				deebox = new DeeBox();
+
+				$('input[value=8]').click();
 				doRefresh();
+				$('#measureCount').bind('blur',function() {
+					doRefresh();
+				});
+				$('input[name=timeSignature]').change(function() {
+					doRefresh();
+				});
+				
+				baseSetting = jQuery.extend(true, {}, displaySetting);
+				
+				$('#factor').bind('blur',function() {
+					var factor = $(this).val();
+					var newDisplayObj = {};
+					for (var k in baseSetting) {
+						if (baseSetting.hasOwnProperty(k)) {
+							newDisplayObj[k] = baseSetting[k] * factor;
+						}	
+				}
+
+	refresh(newDisplayObj);
+				});
+				
 			});
 		</script>
 		
-		<script type="text/javascript" src="MusicStore.js"></script>
-		<script type="text/javascript" src="deebox.js"></script>
-	
+		<script src="MusicStore.js"></script>
+		<script src="deebox.js"></script>
 	</body>
 </html>
